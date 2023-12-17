@@ -118,7 +118,7 @@ class MiniMatlab:
         self.next_button.config(state=tk.NORMAL)
 
     def create_classification_model(self):
-        self.model = NeuralNetwork()
+        self.model = NeuralNetwork(self.activation)
         self.model.add_layer(Dense(self.input_dim, self.neurons, self.learning_rate))
         if self.activation == 'relu':
             self.model.add_layer(ReLU())
@@ -458,7 +458,7 @@ class MiniMatlab:
         summary_text = []
         summary_text.append("Neural Network Model Summary:")
         model_summary = []
-        self.model.model_summary(print_fn=lambda x: model_summary.append(x), activation=self.activation)
+        self.model.model_summary(print_fn=lambda x: model_summary.append(x))
         summary_text.extend(model_summary[1:])  # Skip the first line as it contains the model name and type
         return "\n".join(summary_text)
 

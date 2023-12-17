@@ -6,9 +6,9 @@ from activation_functions import grad_softmax_crossentropy_with_logits,cross_ent
 np.random.seed(42)
 
 class NeuralNetwork:
-
-    def __init__(self):
+    def __init__(self, activation_type):
         self.layers = []
+        self.activation_type = activation_type
 
     def add_layer(self, layer):
         self.layers.append(layer)
@@ -137,23 +137,23 @@ class NeuralNetwork:
 
         return accuracy, loss , confusion_mat, precision, recall, f1
 
-    def model_summary(self,print_fn,activation):
+    def model_summary(self,print_fn):
         # Print a summary of the model architecture
         print_fn("\n=== Model Summary ===")
         print("\n=== Model Summary ===")
-        print_fn("{:<15} {:<15} {:<15}".format("Layer", "Units", "Activation", "Params"))
-        print("{:<15} {:<15} {:<15}".format("Layer", "Units", "Activation", "Params"))
+        print_fn("{:<15} {:<15} {:<15} {}".format("Layer", "Units", "Activation", "Params"))
+        print("{:<15} {:<15} {:<15} {}".format("Layer", "Units", "Activation", "Params"))
         print_fn("=" * 45)
         print("=" * 45)
         total_params = 0
         for i in range(0,len(self.layers), 2):
             layer_type = "Input" if i == 0 else ("Hidden" if i < len(self.layers) - 1 else "Output")
             units = self.layers[i]
-            activation = "None" if i == 0 else (activation if i < len(self.layers) - 1 else "Softmax")
+            activation = self.activation_type if i == 0 else (self.activation_type if i < len(self.layers) - 1 else "Softmax")
             params = len(units.weights) * (len(self.layers[i].weights) + 1)  # +1 for biases
             total_params += params
-            print_fn("{:<15} {} {:<15} {}".format(layer_type, units.weights.shape, activation, params))
-            print("{:<15} {} {:<15} {} ".format(layer_type, units.weights.shape, activation, params))
+            print_fn("{:<15} \u2003 {} \u2003 {} \u2003 {:<15} ".format(layer_type, units.weights.shape, activation, params))
+            print("{:<15} \u2003{} \u2003 {}  \u2003 {:<15} ".format(layer_type, units.weights.shape, activation, params))
         print_fn("=" * 45)
         print("=" * 45)
         print_fn("Total Parameters: {}".format(total_params))
