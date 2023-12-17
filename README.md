@@ -10,13 +10,13 @@ This project is part of an AI course supervised by Dr. Imad Natsheh. The goal is
    git clone https://github.com/your-username/mini-matlab.git
    ```
 
-1. Navigate to the project directory:
+2. Navigate to the project directory:
 
   ```bash
   cd mini-matlab
   ```
 
-1. Install the required dependencies:
+3. Install the required dependencies:
 
    ```bash
    pip install -r requirements.txt
@@ -27,9 +27,9 @@ This project is part of an AI course supervised by Dr. Imad Natsheh. The goal is
 
 Run the main script using the following command:
 
-```bash
-python main.py
-```
+   ```bash
+    python main.py
+   ```
 
 
 This will launch the Mini MATLAB application.
@@ -39,7 +39,6 @@ Contributions to this project are welcome! If you have any improvements, bug fix
 
 ## Acknowledgments
 Dr. Imad Natsheh - Course Supervisor
-OpenAI - For providing the GPT-3.5 model used for assistance in writing this README.
 
 
 Happy coding!
