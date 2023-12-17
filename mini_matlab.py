@@ -3,10 +3,20 @@ from tkinter import filedialog, messagebox
 import os
 import pandas as pd
 import numpy as np
+
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import torchvision.models as models
+import torchvision.transforms as transforms
+from torchvision.datasets import ImageFolder
+from torch.utils.data import DataLoader, random_split
+
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
 from activation_functions import  ReLU, Dense, Tanh, Sigmoid
 from NN import NeuralNetwork
 
@@ -60,6 +70,7 @@ class MiniMatlab:
         self.model = None
         self.training_window = None
         self.problem_type = None
+        self.cnn_type = None
 
     def validate_image_folder(self, folder_path):
         # Check if the folder contains at least two subfolders
@@ -98,6 +109,7 @@ class MiniMatlab:
             folder_path = filedialog.askdirectory()
             if folder_path and self.validate_image_folder(folder_path):
                 print(f"Image folder loaded: {folder_path}")
+                self.load_images_folder(folder_path)
                 self.enable_next_button()
             else:
                 messagebox.showerror("Error", "Please insert a folder with at least 2 classes.")
@@ -163,10 +175,6 @@ class MiniMatlab:
             return
 
         # Add labels and entry fields for user input
-        problem_label = tk.Label(second_window,
-                                 text="Please type 0 if the problem is classification and 1 if regression:")
-        problem_entry = tk.Entry(second_window)
-
         if self.data_type_var.get() == "Images":
             model_cnn_type_label = tk.Label(second_window, text="Which CNN model Would you like to choose?")
             model_cnn_type_options = ["resent18", "resent50", "resnet101"]
@@ -187,6 +195,11 @@ class MiniMatlab:
             neurons_label.pack(pady=10)
             neurons_entry.pack(pady=10)
 
+            problem_label = tk.Label(second_window,
+                                     text="Please type 0 if the problem is classification and 1 if regression:")
+            problem_entry = tk.Entry(second_window)
+            problem_label.pack(pady=10)
+            problem_entry.pack(pady=10)
 
 
         activation_label = tk.Label(second_window, text="Activation Function:")
@@ -205,9 +218,6 @@ class MiniMatlab:
         goal_entry = tk.Entry(second_window)
 
         # Add input fields and buttons to the window
-        problem_label.pack(pady=10)
-        problem_entry.pack(pady=10)
-
         activation_label.pack(pady=10)
         activation_dropdown.pack(pady=10)
 
@@ -233,9 +243,13 @@ class MiniMatlab:
         # Function to handle the OK button click
         def on_ok_click():
             # Validate input values
-            self.problem_type = int(problem_entry.get())
-            self.hidden_layers = int(hiddens_entry.get())
-            self.neurons = int(neurons_entry.get())
+            if not self.data_type_var.get() == "Images":
+                self.problem_type = int(problem_entry.get())
+                self.hidden_layers = int(hiddens_entry.get())
+                self.neurons = int(neurons_entry.get())
+            else:
+                self.cnn_type = model_cnn_var.get()
+
             self.learning_rate = float(learning_rate_entry.get())
             self.epochs = int(epochs_entry.get())
             self.goal = float(goal_entry.get())
@@ -270,20 +284,16 @@ class MiniMatlab:
 
         # Function to load classification model with appropriate loss function
         def load_cnn_classification_model():
-            # model = Sequential()
-            # model.add(Conv2D(32, (3, 3), activation='relu', input_shape=(64, 64, 3)))
-            # model.add(MaxPooling2D((2, 2)))
-            # model.add(Flatten())
-            # model.add(Dense(128, activation='relu'))
-            # model.add(Dense(1, activation='sigmoid'))
-            # model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-            # return model
-            pass
+            if self.cnn_type  == 'resent18':
+                self.model = models.resnet18(pretrained=True)
+            elif self.cnn_type == 'resent50':
+                self.model = models.resnet50(pretrained=True)
+            else:
+                self.model = models.resnet101(pretrained=True)
 
         # Load Images data
         if self.data_type_var.get() == "Images":
-            "Change is later!!!!!!!!!!!!!!"
-            self.model = load_cnn_classification_model()
+            load_cnn_classification_model()
 
     def open_third_window(self):
         # Create a new window for the training interface
@@ -358,6 +368,39 @@ class MiniMatlab:
                                       batch_size=1 if self.total_number_samples <= 10 else 4, accuracy_goal=self.goal,
                                       loss_function='mse', print_fn=lambda x: training_summary_text.append(x))
 
+        def train_cnn_model(epochs, goal):
+            batch_size = 32
+            train_loader = DataLoader(self.train_dataset, batch_size=batch_size, shuffle=True)
+            num_classes = len(self.train_dataset.classes)
+            self.model.fc = nn.Linear(self.model.fc.in_features, num_classes)
+
+            # Set the model to training mode
+            self.model.train()
+
+            # Define loss function and optimizer
+            criterion = nn.CrossEntropyLoss()
+            optimizer = optim.Adam(self.model.parameters(), lr=0.001)
+
+            # Train the model
+            num_epochs = 10
+            losses = []
+            for epoch in range(num_epochs):
+                running_loss = 0.0
+                for inputs, labels in train_loader:
+                    optimizer.zero_grad()
+                    outputs = self.model(inputs)
+                    loss = criterion(outputs, labels)
+                    loss.backward()
+                    optimizer.step()
+                    running_loss += loss.item()
+                    losses.append(loss.item())
+
+                average_loss = running_loss / len(train_loader)
+                print(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {average_loss:.4f}")
+
+        if self.data_type_var.get() == "Images":
+            losses = train_cnn_model(self.epochs, self.goal)
+
         training_summary_label = tk.Label(self.trainingPrcoess_window, text="\n".join(training_summary_text),
                                           justify=tk.LEFT)
         training_summary_label.pack(pady=10)
@@ -386,6 +429,24 @@ class MiniMatlab:
 
         exit_button = tk.Button(self.trainingPrcoess_window, text="Exit", command=self.trainingPrcoess_window.destroy)
         exit_button.pack(pady=20)
+
+    def load_images_folder(self,folder_path):
+        # Define a transformation for the input image
+        transform = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ])
+
+        # Load the ImageFolder dataset
+        dataset = ImageFolder(folder_path, transform=transform)
+
+        # Create a DataLoader for batching
+        self.dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
+        train_size = int(0.8 * len(dataset))
+        val_size = len(dataset) - train_size
+        self.train_dataset, self.val_dataset = random_split(dataset, [train_size, val_size])
+
 
     def load_csv_file(self, file_path, processed):
         # Add your preprocessing logic here based on the CSV file
@@ -501,6 +562,3 @@ class MiniMatlab:
 
         exit_button = tk.Button(self.test_window, text="Exit", command=self.test_window.destroy)
         exit_button.pack(pady=20)
-
-
-
