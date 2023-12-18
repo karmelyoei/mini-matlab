@@ -1,1 +1,4 @@
 venv
+.idea
+__pycache__/NN.cpython-39.pyc
+__pycache__/mini_matlab.cpython-39.pyc

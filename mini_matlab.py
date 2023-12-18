@@ -1,4 +1,6 @@
 import tkinter as tk
+from tkinter import ttk
+from tkinter import scrolledtext
 from tkinter import filedialog, messagebox
 import os
 import pandas as pd
@@ -8,6 +10,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torchvision.models as models
+from torchvision.models import ResNet18_Weights, ResNet50_Weights,ResNet101_Weights
 import torchvision.transforms as transforms
 from torchvision.datasets import ImageFolder
 from torch.utils.data import DataLoader, random_split
@@ -118,9 +121,9 @@ class MiniMatlab:
     def detect_num_classes_from_folder(self, folder_path):
         subfolders = [f for f in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, f))]
         if len(subfolders) == 2:
-            self.num_classes_var.set(2)
+            self.num_classes_var.set('2')
         elif len(subfolders) > 2:
-            self.num_classes_var.set(len(subfolders))
+            self.num_classes_var.set(f'{len(subfolders)}')
 
     def preprocess_dataset(self):
         print("LATERRRRRR")
@@ -201,12 +204,15 @@ class MiniMatlab:
             problem_label.pack(pady=10)
             problem_entry.pack(pady=10)
 
+            activation_label = tk.Label(second_window, text="Activation Function:")
+            activation_options = ["relu", "sigmoid", "tanh"]
+            activation_var = tk.StringVar()
+            activation_dropdown = tk.OptionMenu(second_window, activation_var, *activation_options)
+            activation_var.set(activation_options[0])
 
-        activation_label = tk.Label(second_window, text="Activation Function:")
-        activation_options = ["relu", "sigmoid", "tanh"]
-        activation_var = tk.StringVar()
-        activation_dropdown = tk.OptionMenu(second_window, activation_var, *activation_options)
-        activation_var.set(activation_options[0])
+            # Add input fields and buttons to the window
+            activation_label.pack(pady=10)
+            activation_dropdown.pack(pady=10)
 
         learning_rate_label = tk.Label(second_window, text="Learning Rate (0-1):")
         learning_rate_entry = tk.Entry(second_window)
@@ -216,10 +222,6 @@ class MiniMatlab:
 
         goal_label = tk.Label(second_window, text="Accuracy Goal (0-99):")
         goal_entry = tk.Entry(second_window)
-
-        # Add input fields and buttons to the window
-        activation_label.pack(pady=10)
-        activation_dropdown.pack(pady=10)
 
         learning_rate_label.pack(pady=10)
         learning_rate_entry.pack(pady=10)
@@ -249,28 +251,37 @@ class MiniMatlab:
                 self.neurons = int(neurons_entry.get())
             else:
                 self.cnn_type = model_cnn_var.get()
+                self.activation = activation_var.get()
 
             self.learning_rate = float(learning_rate_entry.get())
             self.epochs = int(epochs_entry.get())
             self.goal = float(goal_entry.get())
-            self.activation = activation_var.get()
 
-            if not (validate_number(self.hidden_layers, max_value=10) and
-                    validate_number(self.neurons, max_value=100) and
-                    validate_number(self.problem_type, max_value=1) and
-                    validate_number(self.learning_rate, max_value=1) and
-                    validate_number(self.epochs, max_value=1000) and
-                    validate_number(self.goal, max_value=99)):
-                messagebox.showerror("Error",
-                                     "Invalid input. Please enter valid numeric values within the specified range.")
-                return
+            if self.data_type_var.get() == "Images":
+                if not (validate_number(self.learning_rate, max_value=1) and
+                        validate_number(self.epochs, max_value=1000) and
+                        validate_number(self.goal, max_value=99)):
+                    messagebox.showerror("Error",
+                                         "Invalid input. Please enter valid numeric values within the specified range.")
+                    return
+            else:
+                if not (validate_number(self.hidden_layers, max_value=10) and
+                        validate_number(self.neurons, max_value=100) and
+                        validate_number(self.problem_type, max_value=1) and
+                        validate_number(self.learning_rate, max_value=1) and
+                        validate_number(self.epochs, max_value=1000) and
+                        validate_number(self.goal, max_value=99)):
+                    messagebox.showerror("Error",
+                                         "Invalid input. Please enter valid numeric values within the specified range.")
+                    return
 
-            if self.hidden_layers > self.input_dim:
-                messagebox.showerror("Error",
-                                     "Invalid input. Please enter number of hidden layers less than number of features!")
-                return
+                if self.hidden_layers > self.input_dim:
+                    messagebox.showerror("Error",
+                                         "Invalid input. Please enter number of hidden layers less than number of features!")
+                    return
 
-            self.create_classification_model()
+                self.create_classification_model()
+
             # Hide the second window
             second_window.withdraw()
             self.open_third_window()
@@ -284,12 +295,12 @@ class MiniMatlab:
 
         # Function to load classification model with appropriate loss function
         def load_cnn_classification_model():
-            if self.cnn_type  == 'resent18':
-                self.model = models.resnet18(pretrained=True)
+            if self.cnn_type == 'resent18':
+                self.model = models.resnet18(weights=ResNet18_Weights.DEFAULT)
             elif self.cnn_type == 'resent50':
-                self.model = models.resnet50(pretrained=True)
+                self.model = models.resnet50(weights=ResNet50_Weights.DEFAULT)
             else:
-                self.model = models.resnet101(pretrained=True)
+                self.model = models.resnet101(weights=ResNet101_Weights.DEFAULT)
 
         # Load Images data
         if self.data_type_var.get() == "Images":
@@ -300,6 +311,7 @@ class MiniMatlab:
         self.training_window = tk.Toplevel()
         self.training_window.title("Training Window")
         self.training_window.geometry("800x800")
+        self.training_window.resizable(width=True, height=True)
 
         # Add label for dataset Summary
         data_label = tk.Label(self.training_window, text="The dataset has been split as a following:")
@@ -331,12 +343,21 @@ class MiniMatlab:
         train_button.pack(pady=20)
 
         exit_button = tk.Button(self.training_window, text="Exit", command=self.training_window.destroy)
-        exit_button.pack(pady=20)
+        exit_button.pack()
 
     def open_forth_window(self):
         self.trainingPrcoess_window = tk.Toplevel()
         self.trainingPrcoess_window.title("Training Process Window")
-        self.trainingPrcoess_window.geometry("800x800")
+        self.trainingPrcoess_window.geometry("800x400")
+
+        # Create a Canvas widget with a vertical scrollbar
+        canvas = tk.Canvas(self.trainingPrcoess_window)
+        scrollbar = ttk.Scrollbar(self.trainingPrcoess_window, orient="vertical", command=canvas.yview)
+        canvas.config(yscrollcommand=scrollbar.set)
+
+        # Create a Frame inside the Canvas to hold the content
+        frame = tk.Frame(canvas)
+        canvas.create_window((0, 0), window=frame, anchor=tk.NW)
 
         # Add label for dataset Summary
         label = tk.Label(self.training_window, text="The Training Prcoess:")
@@ -401,16 +422,21 @@ class MiniMatlab:
         if self.data_type_var.get() == "Images":
             losses = train_cnn_model(self.epochs, self.goal)
 
-        training_summary_label = tk.Label(self.trainingPrcoess_window, text="\n".join(training_summary_text),
-                                          justify=tk.LEFT)
-        training_summary_label.pack(pady=10)
+        # training_summary_label = tk.Label(self.trainingPrcoess_window, text="\n".join(training_summary_text),
+        #                                   justify=tk.LEFT)
+        # training_summary_label.pack(pady=10)
+
+        training_summary_text = "\n".join(training_summary_text)
+        text_widget = scrolledtext.ScrolledText(frame, wrap=tk.WORD, width=80, height=30)
+        text_widget.insert(tk.END, training_summary_text)
+        text_widget.pack(padx=10, pady=10)
 
         # Create a new window for the plot
         plot_window = tk.Toplevel(self.root)
         plot_window.title("Training Plot")
 
         fig, ax = plt.subplots()
-        ax.plot(range(1, len(losses) + 1), losses, marker='o')
+        ax.plot(range(1, len(losses) + 1), losses, linestyle='-', marker='')
 
         # Set labels and title
         ax.set_xlabel('Epoch')
@@ -418,17 +444,27 @@ class MiniMatlab:
         ax.set_title('Loss Over Epochs')
 
         # Create a canvas for the plot
-        canvas = FigureCanvasTkAgg(fig, master=plot_window)
-        canvas_widget = canvas.get_tk_widget()
+        canvas_plot = FigureCanvasTkAgg(fig, master=plot_window)
+        canvas_widget = canvas_plot.get_tk_widget()
         canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
         # Draw the updated plot
-        canvas.draw()
+        canvas_plot.draw()
 
         self.show_validation_button()
 
-        exit_button = tk.Button(self.trainingPrcoess_window, text="Exit", command=self.trainingPrcoess_window.destroy)
-        exit_button.pack(pady=20)
+        # Add an event binding to update the scroll region when the Canvas is resized
+        def on_canvas_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        canvas.bind("<Configure>", on_canvas_configure)
+
+        # Pack the Canvas and Scrollbar
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Start the Tkinter event loop
+        self.trainingPrcoess_window.mainloop()
 
     def load_images_folder(self,folder_path):
         # Define a transformation for the input image
@@ -496,7 +532,6 @@ class MiniMatlab:
                                                                           random_state=42)
             self.X_val, self.X_test, self.Y_val, self.Y_test = train_test_split(X_temp, Y_temp, test_size=0.5,
                                                                                 random_state=42)
-
             self.X_train = self.X_train.values
             self.X_val = self.X_val.values
             self.X_test = self.X_test.values
@@ -516,26 +551,38 @@ class MiniMatlab:
 
     def get_model_summary_text(self):
         # Capture the model summary in a string
-        summary_text = []
-        summary_text.append("Neural Network Model Summary:")
-        model_summary = []
-        self.model.model_summary(print_fn=lambda x: model_summary.append(x))
-        summary_text.extend(model_summary[1:])  # Skip the first line as it contains the model name and type
-        return "\n".join(summary_text)
+        if self.data_type_var.get() == "Images":
+            return f'{self.model}'
+        else:
+            summary_text = []
+            summary_text.append("Neural Network Model Summary:")
+            model_summary = []
+            self.model.model_summary(print_fn=lambda x: model_summary.append(x))
+            summary_text.extend(model_summary[1:])  # Skip the first line as it contains the model name and type
+            return "\n".join(summary_text)
 
     def get_data_summary_text(self):
         # Capture the model summary in a string
-        summary_text = [f"Number of classes we have {self.num_classes_var} ",
-                        f"total samples we have {self.total_number_samples}",
-                        f"X_train shape: {self.X_train.shape}, Y_train shape: {self.Y_train.shape}",
-                        f"X_val shape: {self.X_val.shape}, Y_val shape: {self.Y_val.shape}",
-                        f"X_test shape: {self.X_test.shape}, Y_test shape: {self.Y_test.shape}"]
+        if self.data_type_var.get() == "Images":
+            summary_text = [f"Size of the training data is {len(self.train_dataset)}",
+                            f"Size of the testing data is {len(self.val_dataset)}",
+                            f"Number of classes {self.num_classes_var}"]
+        else:
+            summary_text = [f"Number of classes we have {self.num_classes_var} ",
+                            f"total samples we have {self.total_number_samples}",
+                            f"X_train shape: {self.X_train.shape}, Y_train shape: {self.Y_train.shape}",
+                            f"X_val shape: {self.X_val.shape}, Y_val shape: {self.Y_val.shape}",
+                            f"X_test shape: {self.X_test.shape}, Y_test shape: {self.Y_test.shape}"]
         return "\n".join(summary_text)
 
     def show_validation_button(self):
         # Add a button to perform validation
         test_button = tk.Button(self.trainingPrcoess_window, text="Test", command=self.validate_model)
-        test_button.pack(pady=20)
+        exit_button = tk.Button(self.trainingPrcoess_window, text="Exit", command=self.trainingPrcoess_window.destroy)
+        test_button.pack(side=tk.LEFT, padx=20)
+        exit_button.pack(side=tk.LEFT, padx=20)
+
+
 
     def validate_model(self):
         # Dummy validation process, replace with your actual validation process
@@ -546,7 +593,7 @@ class MiniMatlab:
 
         self.test_window = tk.Toplevel()
         self.test_window.title("Testing Results")
-        self.test_window.geometry("800x800")
+        self.test_window.geometry("800x400")
 
         results = ["Test Accuracy: {:.4f}".format(accuracy), "Test loss: {:.4f}".format(loss),
                    f"Confusion Matrix:\n{confusion_mat}",
